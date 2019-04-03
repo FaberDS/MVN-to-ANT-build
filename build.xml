@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="ANT" default="clean" basedir=".">
+
+    <!--Properties-->
+    <property name="project.name"   value="${ant.project.name}"/>
+    <property name="jar-name"       value="${project.name}.jar"/>
+    <property name="version"        value="1.0"/>
+    <!--Properties with system independent Information-->
+    <property file = ".build.properties"/>
+    
+    <tstamp><format property="now" pattern="MMMM dd yyyy hh:mm aa" locale="en,EN"/></tstamp>
+    
+    <!--Checks if mvn.project.name exist if it exist mvn.project.exist is set to true-->
+    <target name="mvn.check">
+        <echo message="Prove if ${mvn.project.name} exist."/>
+        <condition property="mvn.project.exist">
+            <and>
+                <available file="${mvn.project.name}" type="dir"/>
+            </and>
+        </condition>
+    </target>
+
+    <!--If mvn.project.exist is true the directory in src/main/java is past into the src directory
+        else this target does't run-->
+    <target     name="convertMVN" 
+                depends="mvn.check" 
+                if="mvn.project.exist">
+        <echo message="${mvn.project.name} exist."/>
+        <mkdir dir="${src.dir}"/>
+        <copy  todir="${src.dir}">
+            <fileset    dir="${simpleAut.src.main.java.dir}/" 
+                        includes="**/*.java" 
+                        excludes="**/test/**"/>
+        </copy>
+        <delete dir="${mvn.project.name}"/>
+    </target>
+
+    
+
+    <!-- Initilize the Ant directory structure -->
+    <target     name="init" 
+                depends="convertMVN"
+                description="create directory">
+        <mkdir dir="${lib.dir}"/>
+        <mkdir dir="${build-ant.dir}"/>
+        <mkdir dir="${dist.dir}"/>
+        <mkdir dir="${src.dir}"/>
+        <copy todir="${src.dir}">
+            <fileset dir="${w.dir}">
+                <include name="*.java"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <!--Compile all .java files which are in the src directory and place the .class files in the build-ant directory -->
+    <target     name="compile"
+                depends="init" 
+                description="Compile the class files into ${build-ant.dir}">
+
+        <javac  destdir="${build-ant.dir}" debug="false"   includeantruntime="false">
+            <src path="${src.dir}"/>
+        </javac>
+    </target>
+    
+    <!--Create a Java-Archive of all .class files which are located in the build-ant directory exluding the Test.class-->
+    <target     name="jar"
+                depends="compile"
+                description="Creates a Jar-file of the compiled Classes.">
+
+        <jar    destfile="${lib.dir}/${jar-name}"
+                basedir="${build-ant.dir}"
+                excludes = "**/Test.class">
+
+            <manifest>
+                <attribute  name="Main-Class"               value="${package.name}.Main"/>
+                <attribute  name="Implementation-Author"    value="${user.name}" />
+                <attribute  name="Implementation-Version"   value="${version}" />
+                <attribute  name="Implementation-Title"     value="${ant.project.name}" />
+            </manifest>
+
+        </jar>
+   </target>
+
+    <!--Copies the packed JAR-File into the dist directory-->
+    <target     name="install"
+                depends="jar"
+                description="Copies the exicutable created Jar-file into the ${libd.dir}.">
+
+        <copy   todir="${dist.dir}">
+            <file name="${lib.dir}/${jar-name}"/>
+        </copy>
+
+    </target>
+
+    <!--Remove all elements which were required for the building process-->
+    <target     name="clean"
+                depends="install"
+                description="Removes the files/directories needed for the building process.">
+
+        <delete dir="${build-ant.dir}" />
+        <delete dir="${lib.dir}" />     
+    </target>
+
+    <!--Run the JAR-File and pass the name argument which can be set by calling the target
+        ant run -DnameArg=<name> -->
+    <target     name="run"
+                description="Try to run the build Jar-File ${jar-name}.">
+
+        <echo   message="Attempting to run!"/>
+        <java   jar="${dist.dir}/${jar-name}" 
+                fork="true">
+            <arg value="${name.arg}"/>
+        </java>
+    </target> 
+    
+    <!--Remove dist directory-->
+    <target     name="rmDist">
+        <delete dir="${dist.dir}" />
+    </target>
+</project>
